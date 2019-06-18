@@ -23,7 +23,7 @@
   template:
     src: 10-mail.conf.j2
     dest: /etc/dovecot/conf.d/10-mail.conf
-  notify: restart dovecot
+  notify: restart_dovecot
   tags:
     - mailserver
     - dovecot
@@ -33,7 +33,7 @@
     path: "{{ dovecot_config_dir }}/20-imap.conf"
     regexp: '^#imap_client_workarounds'
     line: 'imap_client_workarounds = tb-extra-mailbox-sep'
-  notify: restart dovecot
+  notify: restart_dovecot
   tags:
     - mailserver
     - dovecot
@@ -43,7 +43,7 @@
     path: "{{ dovecot_config_dir }}/20-pop3.conf"
     regexp: '^#pop3_uidl_format'
     line: 'pop3_uidl_format = %08Xu%08Xv'
-  notify: restart dovecot
+  notify: restart_dovecot
   tags:
     - mailserver
     - dovecot
@@ -52,7 +52,7 @@
   template:
     src: 10-master.conf.j2
     dest: "{{ dovecot_config_dir }}/10-master.conf"
-  notify: restart dovecot
+  notify: restart_dovecot
   tags:
     - mailserver
     - dovecot
@@ -61,7 +61,7 @@
   template:
     src: 10-auth.conf.j2
     dest: "{{ dovecot_config_dir }}/10-auth.conf"
-  notify: restart dovecot
+  notify: restart_dovecot
   tags:
     - mailserver
     - dovecot

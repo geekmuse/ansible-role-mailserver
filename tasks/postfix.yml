@@ -11,7 +11,7 @@
     - postfix
 
 - name: Ensure Postfix is started
-  service:
+  systemd:
     name: "{{ mailserver_postfix_service }}"
     state: started
     enabled: true
@@ -43,7 +43,7 @@
   tags:
     - postfix
     - mailserver
-  notify: restart postfix
+  notify: restart_postfix
 
 - name: Install postfix master configuration1
   template:
@@ -52,7 +52,7 @@
   tags:
     - postfix
     - mailserver
-  notify: restart postfix
+  notify: restart_postfix
 
 - name: Create file local-host-names
   copy:
@@ -61,7 +61,7 @@
   tags:
     - postfix
     - mailserver
-  notify: restart postfix
+  notify: restart_postfix
 
 - name: Link ldap files with postfix's main configuration
   blockinfile:
@@ -83,3 +83,66 @@
     src: ldap-users.cf.j2
     dest: /etc/postfix/ldap-userss.cf
   when: postfix_ldap == true
+
+- name: Setup virtual file
+  lineinfile:
+    path: /etc/postfix/virtual
+    line: "{{ item.addr }}    {{ item.alias }}"
+  with_items: "{{ postfix_virtual_maps }}"
+  when: postfix_virtual_maps is defined and (postfix_virtual_maps|length > 0)
+
+- name: Create virtual database
+  command: postmap /etc/postfix/virtual
+  when: postfix_virtual_maps is defined and (postfix_virtual_maps|length > 0)
+  notify: restart_postfix
+
+- name: Setup relay_domains file
+  lineinfile:
+    path: /etc/postfix/relay_domains
+    line: "{{ item }}       #domain"
+    create: True
+  with_items: "{{ postfix_relay_domains }}"
+  when: postfix_relay_domains is defined and (postfix_relay_domains|length > 0)
+
+- name: Create relay_domains database
+  command: postmap /etc/postfix/relay_domains
+  when: postfix_relay_domains is defined and (postfix_relay_domains|length > 0)
+  notify: restart_postfix
+
+- name: Setup virtual_domains file
+  lineinfile:
+    path: /etc/postfix/virtual_domains
+    create: True
+    line: "{{ item }}       #domain"
+  with_items: "{{ postfix_virtual_domains }}"
+  when: postfix_virtual_domains is defined and (postfix_virtual_domains|length > 0)
+
+- name: Create virtual_domains database
+  command: postmap /etc/postfix/virtual_domains
+  when: postfix_virtual_domains is defined and (postfix_virtual_domains|length > 0)
+  notify: restart_postfix
+
+- name: Setup sender_canonical file
+  lineinfile:
+    path: /etc/postfix/sender_canonical
+    create: True
+    line: "{{ item.user }}  {{ item.sender }}"
+  with_items: "{{ postfix_sender_canonical_maps }}"
+  when: postfix_sender_canonical_maps is defined and (postfix_sender_canonical_maps|length > 0)
+
+- name: Create sender_canonical database
+  command: postmap /etc/postfix/sender_canonical
+  when: postfix_sender_canonical_maps is defined and (postfix_sender_canonical_maps|length > 0)
+  notify: restart_postfix
+
+- name: Ensure devnull alias exists
+  lineinfile:
+    path: /etc/aliases
+    line: "{{ item }}:      /dev/null"
+  with_items: "{{ postfix_devnull_aliases }}"
+  when: postfix_devnull_aliases is defined and (postfix_devnull_aliases|length > 0)
+
+- name: Update aliases database
+  command: postmap /etc/aliases
+  when: postfix_devnull_aliases is defined and (postfix_devnull_aliases|length > 0)
+  notify: restart_postfix

@@ -678,13 +678,12 @@ sample_directory = /usr/share/doc/postfix-2.10.1/samples
 #
 readme_directory = /usr/share/doc/postfix-2.10.1/README_FILES
 
-myhostname= {{ postfix_myhostname }}
+myhostname = {{ postfix_myhostname }}
 mydomain = {{ postfix_mydomain }}
 myorigin = $mydomain
-home_mailbox = {{ postfix_home_mailbox }}
-mynetworks = {{ postfix_mynetwork }} 127.0.0.0/8
-inet_interfaces = all
-mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+# home_mailbox = {{ postfix_home_mailbox }}
+# mynetworks = {{ postfix_mynetwork }} 127.0.0.0/8
+mydestination = $myhostname, localhost.$mydomain, localhost, 127.0.0.1, $mydomain, mail.$mydomain#
 smtpd_sasl_type = dovecot
 smtpd_sasl_path = private/auth
 smtpd_sasl_local_domain =
@@ -694,10 +693,31 @@ smtpd_sasl_auth_enable = yes
 smtpd_recipient_restrictions = permit_sasl_authenticated,permit_mynetworks,reject_unauth_destination
 smtp_tls_security_level = may
 smtpd_tls_security_level = may
+smtpd_tls_protocols = !SSLv2, !SSLv3
 smtp_tls_note_starttls_offer = yes
 smtpd_tls_loglevel = 1
+{% if postfix_certbot_domain is defined and postfix_certbot_domain != '' %}
+smtpd_tls_key_file = /etc/letsencrypt/live/{{ postfix_certbot_domain }}/privkey.pem
+smtpd_tls_cert_file = /etc/letsencrypt/live/{{ postfix_certbot_domain }}/cert.pem
+{% else %}
 smtpd_tls_key_file = /etc/postfix/ssl/server.key
 smtpd_tls_cert_file = /etc/postfix/ssl/server.crt
+{% endif %}
 smtpd_tls_received_header = yes
 smtpd_tls_session_cache_timeout = 3600s
 tls_random_source = dev:/dev/urandom
+{% if postfix_virtual_maps is defined and postfix_virtual_maps|length > 0 %}
+virtual_alias_maps = hash:/etc/postfix/virtual
+{% endif %}
+{% if postfix_virtual_domains is defined and postfix_virtual_domains|length > 0 %}
+virtual_alias_domains = hash:/etc/postfix/virtual_domains
+{% endif %}
+{% if postfix_sender_canonical_maps is defined and postfix_sender_canonical_maps|length > 0 %}
+sender_canonical_maps = hash:/etc/postfix/sender_canonical
+{% endif %}
+{% if postfix_relay_domains is defined and postfix_relay_domains|length > 0 %}
+relay_domains = hash:/etc/postfix/relay_domains
+{% endif %}
+{% if postfix_masquerade_domains is defined and postfix_masquerade_domains|length > 0 %}
+masquerade_domains = {{ postfix_masquerade_domains|join(' ') }}
+{% endif %}
